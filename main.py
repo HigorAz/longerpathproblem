@@ -1,5 +1,5 @@
 """
-Caminho mais longo.
+Caminho mais longo (em DAG).
 Leitura de arquivo de entrada com:
   # Numero de vertices
   5
@@ -15,9 +15,9 @@ Leitura de arquivo de entrada com:
   0 4
 
 Execucao:
-  Comando padrao (Executa entrada.txt):
+  Comando padrao (usa entrada.txt):
   python main.py
-  Ou, caso queria personalizado:
+  Ou, se quiser apontar um arquivo especifico:
   python main.py entrada1.txt
 """
 
@@ -25,13 +25,12 @@ from typing import List, Tuple, Optional
 import sys
 
 def parse_input_file(path: str) -> Tuple[int, List[List[int]], int, int]:
-    # Le o arquivo de entrada ignorando linhas em branco e comentarios que comecam com '#'.
-    # Retorna: (n, matriz, origem, destino)
-    
+    # Le o arquivo de entrada e joga fora linhas em branco e comentarios (como "#" usada no exemplo disponibilizado para resolução da atividade).
+    # Retorna n, a matriz de adjacencia, a origem e o destino.
     with open(path, 'r', encoding='utf-8') as f:
         raw = [line.strip() for line in f.readlines()]
 
-    # remove comentarios e linhas vazias
+    # Limpeza basica: ignora linha vazia e comentario
     lines = []
     for line in raw:
         if not line:
@@ -41,14 +40,14 @@ def parse_input_file(path: str) -> Tuple[int, List[List[int]], int, int]:
         lines.append(line)
 
     if not lines:
-        raise ValueError("Arquivo de entrda vazio.")
+        raise ValueError("Arquivo de entrada vazio.")
 
-    # primeira linha: numero de vertices
+    # Primeira linha: numero de vertices
     n = int(lines[0])
     if n <= 0:
         raise ValueError("Numero de vertices deve ser positivo.")
 
-    # próximas n linhas: matriz de adjacencia
+    # As proximas n linhas sao a matriz n x n (0 = sem aresta, qualquer outro inteiro = peso)
     if len(lines) < 1 + n + 1:
         raise ValueError("Arquivo de entrada incompleto: matriz ou origem/destino ausentes.")
 
@@ -60,10 +59,10 @@ def parse_input_file(path: str) -> Tuple[int, List[List[int]], int, int]:
         row = [int(x) for x in row_str]
         matriz.append(row)
 
-    # ultima linha util: origem e destino
+    # Ultima linha util: dois inteiros (origm e destino)
     origem_dest = lines[1 + n].split()
     if len(origem_dest) != 2:
-        raise ValueError("Linha de origem e destino deve conter exatamente dois inteiros.")
+        raise ValueError("Linha de origem e destino precisa ter exatamente dois inteiros.")
     origem, destino = map(int, origem_dest)
 
     if not (0 <= origem < n and 0 <= destino < n):
@@ -73,15 +72,16 @@ def parse_input_file(path: str) -> Tuple[int, List[List[int]], int, int]:
 
 
 def topo_sort_from_adj_matrix(n: int, adj: List[List[int]]) -> List[int]:
-
-    # Lanca ValueError se detectar ciclo (i.e., se nao for DAG).
+    # Faz ordenacao topologica usando Kahn (fila de grau de entrada zero).
+    # Se sobrar vertice sem entrar na ordem, tem ciclo (nao DAG).
     indeg = [0] * n
     for u in range(n):
         for v in range(n):
-            if adj[u][v] != 0:  # 0 = ausencia de aresta (atencao: nao suportamos aresta com peso 0)
+            # Lembra: 0 = sem aresta; qualquer outro inteiro = peso (pode ser negativo)
+            if adj[u][v] != 0:
                 indeg[v] += 1
 
-    # fila de graus de entrda zero
+    # Comeca pelos que nao recebem aresta de ninguem (grau de entrada 0)
     queue = [i for i in range(n) if indeg[i] == 0]
     order: List[int] = []
 
@@ -90,7 +90,8 @@ def topo_sort_from_adj_matrix(n: int, adj: List[List[int]]) -> List[int]:
         u = queue[idx]
         idx += 1
         order.append(u)
-        # "remove" as arestas de u
+
+        # "Remove" as arestas que saem de u (na pratica, so dcrementa o grau dos vizinhos)
         for v in range(n):
             if adj[u][v] != 0:
                 indeg[v] -= 1
@@ -98,43 +99,43 @@ def topo_sort_from_adj_matrix(n: int, adj: List[List[int]]) -> List[int]:
                     queue.append(v)
 
     if len(order) != n:
-        raise ValueError("O grafo nao e aciclico (ciclo detectado).")
+        raise ValueError("O grafo nao eh aciclico (ciclo detectado).")
     return order
 
 
 def longest_path_dag(
     n: int, adj: List[List[int]], s: int, t: int
 ) -> Tuple[Optional[List[int]], Optional[int]]:
-    # Programacao dinamica em ordem topológica para DAG.
-    # Distancas iniciam em -inf; dist[s] = 0.
-    # Relaxa u->v em ordem topológica maximizando dist[v].
+    # Ideia basica: DP em cima da ordem topologica.
+    # Comeca com dist[s] = 0 e o resto em -∞ (-infinito, ou um negativo bem grande).
+    # Para cada aresta u->v, tenta melhorar dist[v] com dist[u] + peso(u,v).
+    # No fim, parent[] serve para remontar o caminho do t ate s.
 
-    # Retorna (caminho, peso_total) ou (None, None) se nao ha caminho s->t.
     order = topo_sort_from_adj_matrix(n, adj)
 
-    # dist[v] = melhor peso acumulado de s ate v
-    NEG_INF = -10**18  # suficiente para int; evita usar -math.inf para somas com inteiros
+    NEG_INF = -10**18   # -∞ (infinito negativo) inteiro para evitar float
     dist = [NEG_INF] * n
     parent = [-1] * n
     dist[s] = 0
 
-    # percorre vertices conforme topológica
+    # Processa na ordem correta: quando chegar em v, todos os u que chegam em v ja foram vistos
     for u in order:
         if dist[u] == NEG_INF:
-            # u nao e alcancavel a partir de s; pode pular relaxacoes
+            # Nao da para sair de um vertice que eu nem consigo alcancar a partir de s
             continue
         for v in range(n):
             w = adj[u][v]
-            if w != 0:  # existe aresta u->v
+            if w != 0:  # So existe aresta se for diferente de 0
                 cand = dist[u] + w
                 if cand > dist[v]:
                     dist[v] = cand
                     parent[v] = u
 
     if dist[t] == NEG_INF:
+        # Valor nulo/Nada levou ate t
         return None, None
 
-    # reconstoi caminho de t voltando por 'parent'
+    # Remonta o caminho otimo do destino para a origem usando parent[]
     path = []
     cur = t
     while cur != -1:
@@ -145,6 +146,8 @@ def longest_path_dag(
 
 
 def main():
+    # Se nao passar nada, usa entrada.txt.
+    # Se passar um caminho de arquivo, usa ele. --> Esse daqui a gente usa só pra fins de facilitar outras entradas mesmo...
     path = "entrada.txt"
     if len(sys.argv) >= 2:
         path = sys.argv[1]
