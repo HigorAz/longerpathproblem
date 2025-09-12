@@ -99,7 +99,7 @@ def topo_sort_from_adj_matrix(n: int, adj: List[List[int]]) -> List[int]:
                     queue.append(v)
 
     if len(order) != n:
-        raise ValueError("O grafo nao eh aciclico (ciclo detectado).")
+        raise ValueError("O grafo nao e aciclico (ciclo detectado).")
     return order
 
 
