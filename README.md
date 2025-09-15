@@ -56,8 +56,8 @@ Exemplo (`entrada.txt`):
 
 ### VSCode / Terminal
 ```bash
-python main.py                    # usa 'entrada.txt' por padrão
-python main.py meu_arquivo.txt    # para usar outro arquivo em específico
+python main.py                        # usa 'entrada.txt' por padrão
+python main.py entrada_exemplo.txt    # para usar outro arquivo em específico
 ```
 
 ## Saída esperada
