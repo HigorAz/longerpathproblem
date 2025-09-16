@@ -6,7 +6,7 @@
 Projeto da disciplina de **Algoritmos Avançados**: cálculo do **caminho simples de maior peso** em um **grafo dirigido acíclico (DAG)** com **pesos** (inclusive **negativos**).
 
 ## Situação do Projeto
-![Status](https://img.shields.io/badge/Status-Em%20Progresso-yellow)
+![Status](https://img.shields.io/badge/Status-Finalizado-green)
 
 ![Etapa](https://img.shields.io/badge/Etapa-N1-green)
 
